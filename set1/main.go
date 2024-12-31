@@ -73,10 +73,7 @@ func challenge3() {
 }
 
 func challenge4() {
-	// for this challenge i want to read the file in assets/encoded ... and then when i encounter a set of newline characters then take the buffer and pass
-	// it to the challenge 3 logic
 	file, err := os.Open("./assets/xor_encoded.txt")
-
 
 	if err != nil {
 		panic(err)
@@ -115,6 +112,45 @@ func challenge4() {
 	fmt.Println("Challenge 4 passed")
 }
 
+func challenge5() {
+	// take an string and a sequential xor string.
+	// step 1: convert the xor to a sequence of bytes that we can apply in the iteration
+	// step 2: convert the input to a byte slice
+	// step 3: iterate byte slice and apply the sequential xor
+
+	inp := "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal"
+	key := "ICE"
+	expected := "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
+
+	keyBytes := []byte(key)
+	inpBytes := []byte(inp)
+
+	var xord []byte
+	var currKeyIdx = 0
+	var kbLen = len(keyBytes) -1
+
+
+	for _, v := range inpBytes {
+		xordByte := xorByte(v, keyBytes[currKeyIdx])
+		xord = append(xord, xordByte)
+
+		if currKeyIdx == kbLen {
+			currKeyIdx = 0
+		} else {
+			currKeyIdx += 1
+		}
+	}
+
+	encoded := encodeHex(xord)
+
+	if strings.Compare(encoded, expected) != 0 {
+		panic("failed challenge 5")
+	}
+	fmt.Println("Challenge 5 passed")
+}
+
+// takes an hexadecimal (base 16) input and decodes it to raw bytes and then xors against every character and
+// scores the output providing the highest output as the answer
 func checkForSingleXorEncoded(inp string) ([]byte, int) {
 	decoded, _ := decodeHex(inp)
 	decodedLen := len(decoded)
@@ -145,6 +181,8 @@ func checkForSingleXorEncoded(inp string) ([]byte, int) {
 	return answer, score
 }
 
+// creates a slice of length l filled with a specific byte b and caches them so they are available for reuse if attempting to iterate a high
+// number of solutions.
 func makeAndFill(l int, c byte) []byte {
 	key := fillKey{
 		l,
@@ -164,6 +202,7 @@ func makeAndFill(l int, c byte) []byte {
 	return ret
 }
 
+// simple character weighting system. uses ETAOIN SHRDLU as the scoring mechanism and returns a score.
 func getCharWeight(char byte) int {
 	wm := map[byte]int{
 		byte('U'): 2,
@@ -195,6 +234,8 @@ func getCharWeight(char byte) int {
 	return wm[char]
 }
 
+// xor takes two equal length byte slices and returns the exclusive or
+// from the bitwise operator on each elemenent sequentially
 func xor(s1, s2 []byte) ([]byte, error) {
 	if len(s1) != len(s2) {
 		return nil, errors.New("length mismatch in xor")
@@ -203,10 +244,14 @@ func xor(s1, s2 []byte) ([]byte, error) {
 	res := make([]byte, len(s1))
 
 	for i := 0; i < len(res); i++ {
-		res[i] = s1[i] ^ s2[i]
+		res[i] = xorByte(s1[i], s2[i])
 	}
 
 	return res, nil
+}
+
+func xorByte(b1, b2 byte) byte {
+	return b1 ^ b2
 }
 
 func decodeHex(s string) ([]byte, error) {
@@ -222,4 +267,5 @@ func main() {
 	challenge2()
 	challenge3()
 	challenge4()
+	challenge5()
 }
