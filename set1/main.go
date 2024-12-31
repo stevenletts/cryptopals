@@ -11,11 +11,12 @@ import (
 )
 
 type fillKey struct {
-    length int
-    char   byte
+	length int
+	char   byte
 }
 
 var makeAndFillCache = map[fillKey][]byte{}
+
 func handleFail(msg string, err error) {
 	fmt.Printf("%s\n", msg)
 	panic(err)
@@ -105,7 +106,7 @@ func challenge4() {
 		}
 	}
 
-	if b := strings.Compare("Now that the party is jumping", string(answer)) ==1 ; b {
+	if b := strings.Compare("Now that the party is jumping", string(answer)) == 1; b {
 		handleFail("something went wrong", errors.New("failed in challenge 4"))
 	}
 
@@ -127,8 +128,7 @@ func challenge5() {
 
 	var xord []byte
 	var currKeyIdx = 0
-	var kbLen = len(keyBytes) -1
-
+	var kbLen = len(keyBytes) - 1
 
 	for _, v := range inpBytes {
 		xordByte := xorByte(v, keyBytes[currKeyIdx])
@@ -190,7 +190,7 @@ func makeAndFill(l int, c byte) []byte {
 	}
 	v, ok := makeAndFillCache[key]
 	if ok {
-		return  v
+		return v
 	}
 
 	ret := make([]byte, l)
