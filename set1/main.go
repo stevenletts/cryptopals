@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/bits"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -114,11 +116,6 @@ func challenge4() {
 }
 
 func challenge5() {
-	// take an string and a sequential xor string.
-	// step 1: convert the xor to a sequence of bytes that we can apply in the iteration
-	// step 2: convert the input to a byte slice
-	// step 3: iterate byte slice and apply the sequential xor
-
 	inp := "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal"
 	key := "ICE"
 	expected := "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
@@ -147,6 +144,58 @@ func challenge5() {
 		panic("failed challenge 5")
 	}
 	fmt.Println("Challenge 5 passed")
+}
+
+func challenge6() {
+	// first check the hamming distance of the two example strings is 37 - sanity check
+	res := hammingDistanceForStrings("this is a test", "wokka wokka!!!")
+
+	if res != 37 {
+		panic("something is wrong in the hamming distance calculator")
+	}
+
+	data, err := os.ReadFile("./assets/decrypt_file.txt")
+	decoded, err := base64.StdEncoding.DecodeString(string(data))
+
+	if err != nil {
+		panic(err)
+	}
+
+	keySizesAndScoredSorted := getKeysizesScored(&decoded, 2, 41)
+	fmt.Printf("%+v", keySizesAndScoredSorted)
+}
+
+type keysizeEvaluation struct {
+	keysize int
+	score   float64
+}
+
+// takes a pointer to read bytes from a file that are not encoded, and a low and high value for ranges
+// iterates and calculates hamming distance for the n amount of bytes where n is the iterative value from l to h.
+// returns a sorted slice of evaluated size and score
+func getKeysizesScored(d *[]byte, l int, h int) []keysizeEvaluation {
+
+	res := make([]keysizeEvaluation, 0, h-l)
+
+	for i := l; i < h; i++ {
+		// for each keysize grab the n number of bytes
+		block1 := (*d)[0:i]
+		block2 := (*d)[i : 2*i]
+
+		dist := hammingDistance(block1, block2)
+		normalisedRes := float64(dist) / float64(i)
+
+		res = append(res, keysizeEvaluation{
+			keysize: i,
+			score:   normalisedRes,
+		})
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].score < res[j].score
+	})
+
+	return res
 }
 
 // takes an hexadecimal (base 16) input and decodes it to raw bytes and then xors against every character and
@@ -254,6 +303,24 @@ func xorByte(b1, b2 byte) byte {
 	return b1 ^ b2
 }
 
+func hammingDistanceForStrings(s1, s2 string) int {
+	b1 := []byte(s1)
+	b2 := []byte(s2)
+
+	return hammingDistance(b1, b2)
+}
+
+func hammingDistance(b1, b2 []byte) int {
+	xord, _ := xor(b1, b2)
+	var res int
+
+	for _, v := range xord {
+		res += bits.OnesCount8(v)
+	}
+
+	return res
+}
+
 func decodeHex(s string) ([]byte, error) {
 	return hex.DecodeString(s)
 }
@@ -268,4 +335,5 @@ func main() {
 	challenge3()
 	challenge4()
 	challenge5()
+	challenge6()
 }
