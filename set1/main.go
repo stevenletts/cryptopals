@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/aes"
 	"encoding/base64"
 	"encoding/hex"
@@ -10,6 +11,7 @@ import (
 	"math/bits"
 	"os"
 	"sort"
+	"slices"
 	"strings"
 )
 
@@ -190,8 +192,6 @@ func challenge6() []byte {
 		}
 	}
 
-
-
 	// fmt.Printf("\nThe first 150 characters of the text are:\n%s\n", string(final[:150]))
 	fmt.Println("Challenge 6 passed")
 	return final
@@ -207,8 +207,56 @@ func challenge7() {
 		panic("error decrytpting")
 	}
 
+	// fmt.Printf("%s", string(text))
+}
 
-//	fmt.Printf("%s", string(text))
+func challenge8() {
+	file, _ := os.Open("./assets/find_ECB_line.txt")
+
+	reader := bufio.NewReader(file)
+
+	var counter int = 1
+
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			break
+		}
+
+		clean := bytes.TrimRight(line, "\r\n")
+
+		var chunks [][]byte
+
+		for i, j := 0, 16; j < len(clean); i, j = i+16, j+16 {
+			chunks = append(chunks, clean[i:j])
+		}
+
+		// for each chunk if the chunk is in the remaining items then we have a match
+		var found = false
+		for i, v := range chunks {
+			for j, s := range chunks {
+				// ignore same index elements
+				if i == j {
+					continue
+				}
+
+				if slices.Equal(v, s) {
+					fmt.Printf("match found on line %d\nline is %+v", counter, v)
+					found = true
+					break
+				}
+
+			}
+			if found {
+				break
+			}
+		}
+		if found {
+			break
+		}
+
+		counter += 1
+	}
 }
 
 func decryptAes128Ecb(data, key []byte) ([]byte, error) {
@@ -426,11 +474,12 @@ func encodeHex(bs []byte) string {
 }
 
 func main() {
-	challenge1()
-	challenge2()
-	challenge3()
-	challenge4()
-	challenge5()
-	challenge6()
-	challenge7()
+	//	challenge1()
+	//	challenge2()
+	//	challenge3()
+	//	challenge4()
+	//	challenge5()
+	//	challenge6()
+	//	challenge7()
+	challenge8()
 }
