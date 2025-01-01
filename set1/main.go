@@ -68,7 +68,7 @@ func challenge2() {
 
 func challenge3() {
 	inp := "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
-	answer, _ := checkForSingleXorEncoded(inp)
+	answer, _, _ := checkForSingleXorHexEncoded(inp)
 	if b := strings.Compare("Cooking MC's like a pound of bacon", string(answer)) == 1; b {
 		handleFail("the result was incorrect", errors.New("incorrect string comparison in challnege 3"))
 	}
@@ -100,8 +100,10 @@ func challenge4() {
 			break
 		}
 
-		possibleAnswer, localScore := checkForSingleXorEncoded(line)
+		possibleAnswer, localScore, _ := checkForSingleXorHexEncoded(line)
 
+		// this pattern looks similar to the one in the fn but it is checking a set of 60 lines for a matching line so we are evaluating
+		// the result against the other results so best of the best case.
 		if localScore > score {
 			answer = possibleAnswer
 			score = localScore
@@ -162,8 +164,62 @@ func challenge6() {
 	}
 
 	keySizesAndScoredSorted := getKeysizesScored(&decoded, 2, 41)
-	fmt.Printf("%+v", keySizesAndScoredSorted)
+	var final []byte
+	var currWinner int
+
+	for i := 0; i < 3; i++ {
+		candidateSize := keySizesAndScoredSorted[i].keysize
+		fmt.Println(candidateSize)
+
+		transposed := transposeBlocks(&decoded, candidateSize)
+
+		// 3) build the derived key
+		var key []byte
+		for _, block := range transposed {
+			_, _, singleByteKey := checkForSingleXor(block, len(block))
+			key = append(key, singleByteKey)
+		}
+
+		textBytes := repeatingKeyXor(decoded, key)
+		// assess textBytes
+		score := evalutatePlainText(textBytes)
+
+		if score > currWinner {
+			final = textBytes
+			currWinner = score
+		}
+	}
+
+	fmt.Printf("\n The first 150 characters of the text are:\n%s", string(final))
 }
+
+func evalutatePlainText(bs []byte) int {
+	var ret = 0
+	for _, b := range bs {
+		ret += getCharWeight(b)
+	}
+	return ret
+}
+
+func repeatingKeyXor(ciphertext, key []byte) []byte {
+	plaintext := make([]byte, len(ciphertext))
+	for i, c := range ciphertext {
+		plaintext[i] = c ^ key[i%len(key)]
+	}
+	return plaintext
+}
+
+// takes a pointer to a sequence of bytes and iterates over them creating slices stored in a map where i..keysize: bytes in ith position
+func transposeBlocks(d *[]byte, keysize int)  [][]byte {
+	ret := make([][]byte, keysize)
+
+	for i, v := range *d {
+		ret[i%keysize] = append(ret[i%keysize], v)
+	}
+
+	return ret
+}
+
 
 type keysizeEvaluation struct {
 	keysize int
@@ -178,16 +234,21 @@ func getKeysizesScored(d *[]byte, l int, h int) []keysizeEvaluation {
 	res := make([]keysizeEvaluation, 0, h-l)
 
 	for i := l; i < h; i++ {
-		// for each keysize grab the n number of bytes
 		block1 := (*d)[0:i]
 		block2 := (*d)[i : 2*i]
+		block3 := (*d)[2*i : 3*i]
+		block4 := (*d)[3*i : 4*i]
 
-		dist := hammingDistance(block1, block2)
-		normalisedRes := float64(dist) / float64(i)
+		dist1 := hammingDistance(block1, block2)
+		dist2 := hammingDistance(block2, block3)
+		dist3 := hammingDistance(block3, block4)
+
+		// average them
+		avgDist := float64(dist1+dist2+dist3) / 3.0 / float64(i)
 
 		res = append(res, keysizeEvaluation{
 			keysize: i,
-			score:   normalisedRes,
+			score:   avgDist,
 		})
 	}
 
@@ -200,16 +261,21 @@ func getKeysizesScored(d *[]byte, l int, h int) []keysizeEvaluation {
 
 // takes an hexadecimal (base 16) input and decodes it to raw bytes and then xors against every character and
 // scores the output providing the highest output as the answer
-func checkForSingleXorEncoded(inp string) ([]byte, int) {
+func checkForSingleXorHexEncoded(inp string) ([]byte, int, byte) {
 	decoded, _ := decodeHex(inp)
 	decodedLen := len(decoded)
 
+	return checkForSingleXor(decoded, decodedLen)
+}
+
+func checkForSingleXor(inp []byte, len int) ([]byte, int, byte) {
 	var answer []byte
 	var score = 0
+	var key byte
 
 	for i := 0; i < 256; i++ {
-		temp := makeAndFill(decodedLen, byte(i))
-		res, err := xor(decoded, temp)
+		temp := makeAndFill(len, byte(i))
+		res, err := xor(inp, temp)
 		localScore := 0
 
 		if err != nil {
@@ -224,10 +290,11 @@ func checkForSingleXorEncoded(inp string) ([]byte, int) {
 		if localScore > score {
 			answer = res
 			score = localScore
+			key = byte(i)
 		}
 	}
 
-	return answer, score
+	return answer, score, key
 }
 
 // creates a slice of length l filled with a specific byte b and caches them so they are available for reuse if attempting to iterate a high
