@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/aes"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -148,7 +149,7 @@ func challenge5() {
 	fmt.Println("Challenge 5 passed")
 }
 
-func challenge6() {
+func challenge6() []byte {
 	// first check the hamming distance of the two example strings is 37 - sanity check
 	res := hammingDistanceForStrings("this is a test", "wokka wokka!!!")
 
@@ -169,14 +170,13 @@ func challenge6() {
 
 	for i := 0; i < 3; i++ {
 		candidateSize := keySizesAndScoredSorted[i].keysize
-		fmt.Println(candidateSize)
 
 		transposed := transposeBlocks(&decoded, candidateSize)
 
 		// 3) build the derived key
 		var key []byte
 		for _, block := range transposed {
-			_, _, singleByteKey := checkForSingleXor(block, len(block))
+			_, _, singleByteKey := checkForSingleXor(block)
 			key = append(key, singleByteKey)
 		}
 
@@ -190,9 +190,38 @@ func challenge6() {
 		}
 	}
 
-	fmt.Printf("\n The first 150 characters of the text are:\n%s", string(final))
+
+
+	// fmt.Printf("\nThe first 150 characters of the text are:\n%s\n", string(final[:150]))
+	fmt.Println("Challenge 6 passed")
+	return final
 }
 
+func challenge7() {
+	data, _ := os.ReadFile("./assets/aes_encrypted_file.txt")
+	decoded, _ := base64.StdEncoding.DecodeString(string(data))
+
+	_, err := decryptAes128Ecb(decoded, []byte("YELLOW SUBMARINE"))
+
+	if err != nil {
+		panic("error decrytpting")
+	}
+
+
+//	fmt.Printf("%s", string(text))
+}
+
+func decryptAes128Ecb(data, key []byte) ([]byte, error) {
+	cipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	plainText := make([]byte, len(data))
+	for i, j := 0, 16; i < len(data); i, j = i+16, j+16 {
+		cipher.Decrypt(plainText[i:j], data[i:j])
+	}
+	return plainText, nil
+}
 func evalutatePlainText(bs []byte) int {
 	var ret = 0
 	for _, b := range bs {
@@ -210,7 +239,7 @@ func repeatingKeyXor(ciphertext, key []byte) []byte {
 }
 
 // takes a pointer to a sequence of bytes and iterates over them creating slices stored in a map where i..keysize: bytes in ith position
-func transposeBlocks(d *[]byte, keysize int)  [][]byte {
+func transposeBlocks(d *[]byte, keysize int) [][]byte {
 	ret := make([][]byte, keysize)
 
 	for i, v := range *d {
@@ -219,7 +248,6 @@ func transposeBlocks(d *[]byte, keysize int)  [][]byte {
 
 	return ret
 }
-
 
 type keysizeEvaluation struct {
 	keysize int
@@ -263,18 +291,19 @@ func getKeysizesScored(d *[]byte, l int, h int) []keysizeEvaluation {
 // scores the output providing the highest output as the answer
 func checkForSingleXorHexEncoded(inp string) ([]byte, int, byte) {
 	decoded, _ := decodeHex(inp)
-	decodedLen := len(decoded)
 
-	return checkForSingleXor(decoded, decodedLen)
+	return checkForSingleXor(decoded)
 }
 
-func checkForSingleXor(inp []byte, len int) ([]byte, int, byte) {
+// takes an input of bytes, a length
+func checkForSingleXor(inp []byte) ([]byte, int, byte) {
 	var answer []byte
 	var score = 0
 	var key byte
+	length := len(inp)
 
 	for i := 0; i < 256; i++ {
-		temp := makeAndFill(len, byte(i))
+		temp := makeAndFill(length, byte(i))
 		res, err := xor(inp, temp)
 		localScore := 0
 
@@ -403,4 +432,5 @@ func main() {
 	challenge4()
 	challenge5()
 	challenge6()
+	challenge7()
 }
