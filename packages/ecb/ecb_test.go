@@ -1,9 +1,8 @@
 package ecb
 
 import (
+	"bytes"
 	"encoding/base64"
-	//	"encoding/hex"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -31,7 +30,7 @@ func TestCheckFileForECBSuccess(t *testing.T) {
 	}
 }
 
-func TestEncryptAesCbc(t *testing.T) {
+func TestEncryptAesCbcSimple(t *testing.T) {
 	var key = []byte("YELLOW SUBMARINE")
 	var plaintext = []byte("abcdefghijklmnop")
 	iv := make([]byte, 16)
@@ -42,9 +41,33 @@ func TestEncryptAesCbc(t *testing.T) {
 		t.Fatalf("something went wrong")
 	}
 
-	fmt.Printf("\nciphertext:\n%+v\n", string(ciphertext))
-
 	plaintext2, _ := DecryptAesCbc(ciphertext, iv, key)
+	res := bytes.Trim(plaintext2, "\x00")
 
-	fmt.Printf("\nplaintext:\n%+v\n", string(plaintext2))
+	if bytes.Compare(res, plaintext) != 0 {
+		t.Fatalf("failed the cbc envryopt decrypt flow. expected %s, recieved %s", string(plaintext), string(plaintext2))
+	}
+
+}
+
+func TestEncryptAesCbcExample(t *testing.T) {
+	var key = []byte("YELLOW SUBMARINE")
+	iv := []byte{
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+	}
+
+	data, _ := os.ReadFile("./test_files/cbc_encrypted.txt")
+
+	decoded, _ := base64.StdEncoding.DecodeString(string(data))
+	plaintext, _ := DecryptAesCbc(decoded, iv, key)
+
+	res := bytes.Trim(plaintext, "\x00")
+
+	if strings.Compare(string(res[:33]), "I'm back and I'm ringin' the bell") != 0 {
+		t.Fatalf("failed to decode the cbc file")
+	}
+
 }

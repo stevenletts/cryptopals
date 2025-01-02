@@ -88,43 +88,28 @@ func DecryptAesCbc(ciphertext, iv, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	size := cipher.BlockSize()
 	plaintext := make([]byte, len(ciphertext))
 	chunks := ChunkByteSlice(ciphertext, size)
 
 	prev := iv
-	for i, chunk := range chunks {
-		var from, to int = i * size, (i + 1) * size
-		xord, err := xor.ApplyXor(chunk, prev)
+	for _, chunk := range chunks {
+		dec := make([]byte, size)
+		cipher.Decrypt(dec, chunk)
+
+		xord, err := xor.ApplyXor(dec, prev)
 
 		if err != nil {
 			panic(err)
 		}
 
-		cipher.Decrypt(plaintext[from:to], xord)
-		prev = ciphertext[from:to]
+		plaintext = append(plaintext, xord...)
+
+		prev = chunk
 	}
 
 	return plaintext, nil
-}
-
-func EncryptAesEcbInCbcMode(plaintext, iv, key []byte) ([]byte, error) {
-	cipher, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-
-	ciphertext := make([]byte, len(plaintext))
-	for i, j := 0, 16; i < len(ciphertext); i, j = i+16, j+16 {
-		var prev []byte
-		if i == 0 {
-			prev = iv
-		} else {
-			prev = ciphertext[i-16 : j-16]
-		}
-		cipher.Encrypt(ciphertext[i:j], prev)
-	}
-	return ciphertext, nil
 }
 
 func CheckFileForECB(fp string) int {
