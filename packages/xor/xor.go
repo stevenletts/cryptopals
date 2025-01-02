@@ -22,7 +22,6 @@ func ApplyXor(s1, s2 []byte) ([]byte, error) {
 	}
 
 	return res, nil
-
 }
 
 // FindSingleByteXor takes bytes that should be decoded and then xors against every character possible to check for single byte encryption
