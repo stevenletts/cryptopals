@@ -71,3 +71,17 @@ func TestEncryptAesCbcExample(t *testing.T) {
 	}
 
 }
+
+func TestDetectECBOrCBC(t *testing.T) {
+	atk1 := []byte("PADDS PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP")
+
+	for i := 0; i < 100; i++ {
+		res := DetectECBOrCBC(atk1)
+
+		if !res {
+			t.Fatalf("guessed the wrong mode")
+		}
+
+	}
+
+}

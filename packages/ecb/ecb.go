@@ -7,31 +7,35 @@ import (
 	"github.com/stevenletts/cryptopals/packages/pkcs"
 	"github.com/stevenletts/cryptopals/packages/xor"
 	"os"
-	"slices"
 )
 
 // ChunkByteSlice takes a data src and a blocksize and returns a slice of equal chunks with padding at the end if required
-func ChunkByteSlice(data []byte, size int) [][]byte {
+func ChunkByteSlice(data []byte, size int) ([][]byte, int) {
 	var ret [][]byte
+	var length = 0
 	// there is an early retrun if pad len is 0 which i assume to be true for cipherd text for now at least
+
 	padded := pkcs.Pad7(data, size)
+
 	for i := 0; i < len(padded); i += size {
+		length += size
 		ret = append(ret, padded[i:i+size])
 	}
 
-	return ret
+	return ret, length
 }
 
-// DecryptAesEcb talkes a data and key byte slice and applies the cipher in blocks of 16
+// DecryptAesEcb takes a data and key byte slice and applies the cipher in blocks of 16
 // in the decryption
 func DecryptAesEcb(data, key []byte) ([]byte, error) {
 	cipher, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	plainText := make([]byte, len(data))
+
 	size := cipher.BlockSize()
-	chunks := ChunkByteSlice(data, size)
+	chunks, length := ChunkByteSlice(data, size)
+	plainText := make([]byte, length)
 
 	for i, chunk := range chunks {
 		var from, to int = i * size, (i + 1) * size
@@ -46,9 +50,9 @@ func EncryptAesEcb(data, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	plainText := make([]byte, len(data))
 	size := cipher.BlockSize()
-	chunks := ChunkByteSlice(data, size)
+	chunks, length := ChunkByteSlice(data, size)
+	plainText := make([]byte, length)
 
 	for i, chunk := range chunks {
 		var from, to int = i * size, (i + 1) * size
@@ -63,10 +67,12 @@ func EncryptAesCbc(plaintext, iv, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	size := cipher.BlockSize()
-	ciphertext := make([]byte, len(plaintext))
 
-	chunks := ChunkByteSlice(plaintext, size)
+	size := cipher.BlockSize()
+
+	chunks, length := ChunkByteSlice(plaintext, size)
+	ciphertext := make([]byte, length)
+
 	prev := iv
 	for i, chunk := range chunks {
 		var from, to int = i * size, (i + 1) * size
@@ -90,8 +96,8 @@ func DecryptAesCbc(ciphertext, iv, key []byte) ([]byte, error) {
 	}
 
 	size := cipher.BlockSize()
-	plaintext := make([]byte, len(ciphertext))
-	chunks := ChunkByteSlice(ciphertext, size)
+	chunks, length := ChunkByteSlice(ciphertext, size)
+	plaintext := make([]byte, length)
 
 	prev := iv
 	for _, chunk := range chunks {
@@ -122,7 +128,6 @@ func CheckFileForECB(fp string) int {
 	reader := bufio.NewReader(file)
 
 	var counter int = 1
-
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
@@ -132,31 +137,11 @@ func CheckFileForECB(fp string) int {
 		clean := bytes.TrimRight(line, "\r\n")
 
 		var chunks [][]byte
+		chunks, _ = ChunkByteSlice(clean, 16)
 
-		for i, j := 0, 16; j < len(clean); i, j = i+16, j+16 {
-			chunks = append(chunks, clean[i:j])
-		}
+		var ecbFound bool = checkChunksForECB(chunks)
 
-		// for each chunk if the chunk is in the remaining items then we have a match
-		var found = false
-		for i, v := range chunks {
-			for j, s := range chunks {
-				// ignore same index elements
-				if i == j {
-					continue
-				}
-
-				if slices.Equal(v, s) {
-					found = true
-					break
-				}
-
-			}
-			if found {
-				break
-			}
-		}
-		if found {
+		if ecbFound {
 			break
 		}
 
@@ -164,4 +149,19 @@ func CheckFileForECB(fp string) int {
 	}
 
 	return counter
+}
+
+func DetectECBOrCBC(atk []byte) bool {
+	ciphertext, encryptionMode := encryptionOracle(atk)
+	chunks, _ := ChunkByteSlice(ciphertext, 16)
+
+	var ecbFound bool = checkChunksForECB(chunks)
+
+	if encryptionMode == 0 && ecbFound {
+		return true
+	} else if encryptionMode == 1 && !ecbFound {
+		return true
+	}
+
+	return false
 }
