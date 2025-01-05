@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/aes"
+	"errors"
 	"github.com/stevenletts/cryptopals/packages/pkcs"
 	"github.com/stevenletts/cryptopals/packages/xor"
 	"os"
@@ -38,7 +39,7 @@ func DecryptAesEcb(data, key []byte) ([]byte, error) {
 	plainText := make([]byte, length)
 
 	for i, chunk := range chunks {
-		var from, to int = i * size, (i + 1) * size
+		var from, to = i * size, (i + 1) * size
 		cipher.Decrypt(plainText[from:to], chunk)
 	}
 
@@ -55,7 +56,7 @@ func EncryptAesEcb(data, key []byte) ([]byte, error) {
 	plainText := make([]byte, length)
 
 	for i, chunk := range chunks {
-		var from, to int = i * size, (i + 1) * size
+		var from, to = i * size, (i + 1) * size
 		cipher.Encrypt(plainText[from:to], chunk)
 	}
 
@@ -75,7 +76,7 @@ func EncryptAesCbc(plaintext, iv, key []byte) ([]byte, error) {
 
 	prev := iv
 	for i, chunk := range chunks {
-		var from, to int = i * size, (i + 1) * size
+		var from, to = i * size, (i + 1) * size
 		xord, err := xor.ApplyXor(chunk, prev)
 
 		if err != nil {
@@ -127,7 +128,7 @@ func CheckFileForECB(fp string) int {
 
 	reader := bufio.NewReader(file)
 
-	var counter int = 1
+	var counter = 1
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
@@ -139,7 +140,7 @@ func CheckFileForECB(fp string) int {
 		var chunks [][]byte
 		chunks, _ = ChunkByteSlice(clean, 16)
 
-		var ecbFound bool = checkChunksForECB(chunks)
+		var ecbFound = checkChunksForECB(chunks)
 
 		if ecbFound {
 			break
@@ -151,17 +152,84 @@ func CheckFileForECB(fp string) int {
 	return counter
 }
 
-func DetectECBOrCBC(atk []byte) bool {
+// DetectECBOrCBC takes a string to pass to a helper fn for the challenge and then returns true if a mode was detected and the mode found
+// otherwise false and the mode that the helper used
+func DetectECBOrCBC(atk []byte) (bool, string) {
 	ciphertext, encryptionMode := encryptionOracle(atk)
 	chunks, _ := ChunkByteSlice(ciphertext, 16)
 
-	var ecbFound bool = checkChunksForECB(chunks)
+	var ecbFound = checkChunksForECB(chunks)
 
-	if encryptionMode == 0 && ecbFound {
-		return true
-	} else if encryptionMode == 1 && !ecbFound {
-		return true
+	if encryptionMode == "ECB" && ecbFound {
+		return true, encryptionMode
+	} else if encryptionMode == "CBC" && !ecbFound {
+		return true, encryptionMode
 	}
 
-	return false
+	return false, encryptionMode
+}
+
+func getCipherTextsChunksForPrefixTransposed(size int, enc encryptionFunc) [][][]byte {
+	var ciphertexts [][][]byte
+
+	// we use -1 because it means the last cipher text is no prefix instead of the first in the slice so when transposed its easier
+	for i := size - 1; i > -1; i-- {
+		ciphertext := enc(fillByteSlice(make([]byte, i)))
+		chunks, _ := ChunkByteSlice(ciphertext, size)
+		ciphertexts = append(ciphertexts, chunks)
+	}
+
+	// using size means we can end up with empty slices with no ciphertext but thats ok because the iterators should handle skipping
+	// as there could always be a max of size to be filled. 
+	transposed := make([][][]byte, size)
+	for i := 0; i < size; i++ {
+		var group [][]byte
+		for _, chunks := range ciphertexts {
+			if i < len(chunks) {
+				group = append(group, chunks[i])
+			}
+		}
+		transposed[i] = group
+	}
+
+	return transposed
+}
+
+func ByteAtATimeECBDecryption() []byte {
+	enc := makeSecretEncryptionFn()
+	blockSize := discoverBlockSize(enc)
+
+	chunks, _ := ChunkByteSlice(enc(fillByteSlice(make([]byte, blockSize*2))), blockSize)
+	isEcb := checkChunksForECB(chunks)
+
+	if !isEcb {
+		panic(errors.New("the encryption is not ECB"))
+	}
+
+	ctsTransposed := getCipherTextsChunksForPrefixTransposed(blockSize, enc)
+
+	var plaintext []byte = fillByteSlice(make([]byte, blockSize-1))
+	for i := 0; i < len(ctsTransposed); i++ {
+		transposedChunksSolvingFor := ctsTransposed[i]
+		for j := 0; j < len(transposedChunksSolvingFor); j++ {
+			chunkToSolveFor := transposedChunksSolvingFor[j]
+			// the last 15 works like a sliding window to capture the latest solved bytes and always feed in a chunk
+			// that is one byte short of a known input to match against the solve for
+			last15 := plaintext[len(plaintext)-15:]
+
+			for k := 0; k < 256; k++ {
+				sliceToSolveFor := append(last15, byte(k))
+				x := enc(sliceToSolveFor)[:blockSize]
+
+				if bytes.Compare(x, chunkToSolveFor) == 0 {
+					plaintext = append(plaintext, byte(k))
+					break
+				}
+			}
+
+		}
+	}
+
+	return plaintext[blockSize-1:]
+
 }
