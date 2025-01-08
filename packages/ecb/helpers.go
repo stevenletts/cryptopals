@@ -3,8 +3,10 @@ package ecb
 import (
 	"crypto/rand"
 	"encoding/base64"
-	//	"fmt"
+	"strings"
+
 	"errors"
+	"fmt"
 	randmath "math/rand/v2"
 	"os"
 	"slices"
@@ -128,4 +130,53 @@ func checkChunksForECB(chunks [][]byte) bool {
 		}
 	}
 	return false
+}
+
+type StringKVParser map[string]string
+
+func (s StringKVParser) Get(key string) (string, bool) {
+	val, ok := s[key]
+	return val, ok
+}
+
+func (s StringKVParser) Set(key, value string) {
+	s[key] = value
+}
+
+func keyValueParser(str string) StringKVParser {
+	parser := StringKVParser{}
+
+	kvs := strings.Split(str, "&")
+
+	for _, kvPair := range kvs {
+		parts := strings.Split(kvPair, "=")
+		if len(parts) == 2 {
+			k, v := parts[0], parts[1]
+			parser.Set(k, v)
+		} else {
+			panic(errors.New("check why the kvPair is outputting multiple parts"))
+		}
+	}
+
+	return parser
+}
+
+func profileFor(email string) (StringKVParser, string) {
+
+	parser := StringKVParser{
+		"email": strings.NewReplacer("&", "", "=", "").Replace(email),
+		"uid":   "10",
+		"role":  "user",
+	}
+
+	var kvPairs []string
+
+	for k, v := range parser {
+		pair := fmt.Sprintf("%s=%s", k, v)
+		kvPairs = append(kvPairs, pair)
+	}
+	kvstr := strings.Join(kvPairs, "&")
+
+	return parser, kvstr
+
 }

@@ -180,7 +180,7 @@ func getCipherTextsChunksForPrefixTransposed(size int, enc encryptionFunc) [][][
 	}
 
 	// using size means we can end up with empty slices with no ciphertext but thats ok because the iterators should handle skipping
-	// as there could always be a max of size to be filled. 
+	// as there could always be a max of size to be filled.
 	transposed := make([][][]byte, size)
 	for i := 0; i < size; i++ {
 		var group [][]byte

@@ -112,7 +112,7 @@ func TestByteAtATimeECBDecryption(t *testing.T) {
 
 	solution := ByteAtATimeECBDecryption()
 
-	// there is padding of 1 here just remove to finish 
+	// there is padding of 1 here just remove to finish
 	if bytes.Compare(expectedBytes, solution[:len(solution)-1]) != 0 {
 		t.Fatalf("failed")
 	}
