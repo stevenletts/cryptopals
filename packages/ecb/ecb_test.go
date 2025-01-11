@@ -2,10 +2,13 @@ package ecb
 
 import (
 	"bytes"
-	"encoding/base64"
+//	"encoding/base64"
+	"fmt"
+	"github.com/stevenletts/cryptopals/packages/pkcs"
+
 	//	"encoding/base64"
-	"os"
-	//	"strings"
+//	"os"
+		"strings"
 	"testing"
 )
 
@@ -95,26 +98,58 @@ import (
 //		t.Fatalf("failed to discover the block size")
 //	}
 //}
+//
+//func TestByteAtATimeECBDecryption(t *testing.T) {
+//	data, err := os.ReadFile("./test_files/secret64.txt")
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	length := base64.StdEncoding.DecodedLen(len(data))
+//	var expectedBytes = make([]byte, length)
+//	_, err = base64.StdEncoding.Decode(expectedBytes, data)
+//
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	solution := ByteAtATimeECBDecryption()
+//
+//	// there is padding of 1 here just remove to finish
+//	if bytes.Compare(expectedBytes, solution[:len(solution)-1]) != 0 {
+//		t.Fatalf("failed")
+//	}
+//
+//}
+//
+func TestEncodeProfile(t *testing.T) {
+	kvStr := profileFor("foo@bar.com")
+	key := []byte("YELLOW SUBMARINE")
+	encrypted, _ := EncryptAesEcb([]byte(kvStr), key)
+	decrypted,_ := DecryptAesEcb(encrypted, key)
+	pad7removed := pkcs.Pad7Remove(decrypted, len(key))
 
-func TestByteAtATimeECBDecryption(t *testing.T) {
-	data, err := os.ReadFile("./test_files/secret64.txt")
-	if err != nil {
-		panic(err)
+
+	if bytes.Compare(pad7removed, []byte(kvStr)) != 0 {
+		t.Fatalf("string mismatch, \n%v\n%v\n", decrypted, []byte(kvStr))
 	}
 
-	length := base64.StdEncoding.DecodedLen(len(data))
-	var expectedBytes = make([]byte, length)
-	_, err = base64.StdEncoding.Decode(expectedBytes, data)
+	u1e := []byte("foooo@bar.com")
+	user1 := profileFor(string(u1e))
+	adminSlice := pkcs.Pad7([]byte("admin"), 16)
+	user2Str :=string(append(append([]byte(u1e[:10]), adminSlice...), u1e[10:]...))
+	user2 := profileFor(user2Str)
 
-	if err != nil {
-		panic(err)
-	}
+	user1enc, _ := EncryptAesEcb([]byte(user1), key)
+	user2enc, _ := EncryptAesEcb([]byte(user2), key)
 
-	solution := ByteAtATimeECBDecryption()
+	manipulated := append(user1enc[:32], user2enc[16:32]...)
 
-	// there is padding of 1 here just remove to finish
-	if bytes.Compare(expectedBytes, solution[:len(solution)-1]) != 0 {
-		t.Fatalf("failed")
+	res, _ := DecryptAesEcb(manipulated, key)
+	unpad := pkcs.Pad7Remove(res, 16)
+
+	if strings.Compare(string(unpad), "email=foooo@bar.com&uid=10&role=admin") != 0 {
+		t.Fatalf("wrong output\n%s\n", string(unpad))
 	}
 
 }

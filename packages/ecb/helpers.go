@@ -161,22 +161,16 @@ func keyValueParser(str string) StringKVParser {
 	return parser
 }
 
-func profileFor(email string) (StringKVParser, string) {
+func profileFor(email string) string {
+    // Sanitizing the email by removing '&' and '='
+    sanitizedEmail := strings.NewReplacer("&", "", "=", "").Replace(email)
 
-	parser := StringKVParser{
-		"email": strings.NewReplacer("&", "", "=", "").Replace(email),
-		"uid":   "10",
-		"role":  "user",
-	}
+    // Build in the desired order explicitly:
+    kvPairs := []string{
+        fmt.Sprintf("email=%s", sanitizedEmail),
+        fmt.Sprintf("uid=%s", "10"),
+        fmt.Sprintf("role=%s", "user"),
+    }
 
-	var kvPairs []string
-
-	for k, v := range parser {
-		pair := fmt.Sprintf("%s=%s", k, v)
-		kvPairs = append(kvPairs, pair)
-	}
-	kvstr := strings.Join(kvPairs, "&")
-
-	return parser, kvstr
-
+    return strings.Join(kvPairs, "&")
 }

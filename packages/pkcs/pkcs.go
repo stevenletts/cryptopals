@@ -20,3 +20,8 @@ func Pad7(plaintext []byte, blockSize int) []byte {
 
 	return append(plaintext, padding...)
 }
+
+func Pad7Remove(data []byte, blockSize int) []byte {
+	paddingLen := int(data[len(data)-1])
+	return data[:len(data) - paddingLen]
+}
