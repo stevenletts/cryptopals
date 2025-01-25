@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"errors"
+	"fmt"
 	"github.com/stevenletts/cryptopals/packages/pkcs"
 	"github.com/stevenletts/cryptopals/packages/xor"
 	"os"
@@ -172,6 +173,7 @@ func DetectECBOrCBC(atk []byte) (bool, string) {
 func getCipherTextsChunksForPrefixTransposed(size int, enc encryptionFunc) [][][]byte {
 	var ciphertexts [][][]byte
 
+	// first create all possible ciphertexts with the possible chunk size variable
 	// we use -1 because it means the last cipher text is no prefix instead of the first in the slice so when transposed its easier
 	for i := size - 1; i > -1; i-- {
 		ciphertext := enc(fillByteSlice(make([]byte, i)))
@@ -179,14 +181,16 @@ func getCipherTextsChunksForPrefixTransposed(size int, enc encryptionFunc) [][][
 		ciphertexts = append(ciphertexts, chunks)
 	}
 
+	// group all the input chunks together so its like [[[c1-15],[c1-14],[c1-13]],[[c2-15],[c2-14],[c3-13]]]
 	// using size means we can end up with empty slices with no ciphertext but thats ok because the iterators should handle skipping
 	// as there could always be a max of size to be filled.
 	transposed := make([][][]byte, size)
 	for i := 0; i < size; i++ {
 		var group [][]byte
-		for _, chunks := range ciphertexts {
-			if i < len(chunks) {
-				group = append(group, chunks[i])
+		for _, ciphertext := range ciphertexts {
+			if i < len(ciphertext) {
+				chunk := ciphertext[i]
+				group = append(group, chunk)
 			}
 		}
 		transposed[i] = group
@@ -196,12 +200,13 @@ func getCipherTextsChunksForPrefixTransposed(size int, enc encryptionFunc) [][][
 }
 
 func ByteAtATimeECBDecryption() []byte {
-	enc := makeSecretEncryptionFn()
+	enc := makeSecretEncryptionFn(false)
 	blockSize := discoverBlockSize(enc)
 
 	chunks, _ := ChunkByteSlice(enc(fillByteSlice(make([]byte, blockSize*2))), blockSize)
 	isEcb := checkChunksForECB(chunks)
 
+    // not really possible here but the challenge called for it.
 	if !isEcb {
 		panic(errors.New("the encryption is not ECB"))
 	}
@@ -231,5 +236,21 @@ func ByteAtATimeECBDecryption() []byte {
 	}
 
 	return plaintext[blockSize-1:]
+}
+
+func ByteAtATimeECBDecryptionWithRandomPrefix() []byte {
+	enc := makeSecretEncryptionFn(true)
+	blockSize := discoverBlockSize(enc)
+
+	fmt.Printf("block size is %v\n", blockSize)
+
+	prefixLen := findRandomPrefixLen(enc, blockSize)
+
+	fmt.Printf("solved prefix length is %v", prefixLen)
+
+	return []byte{}
+
+//	ctsTransposed := getCipherTextsChunksForPrefixTransposed(blockSize, enc)
 
 }
+
