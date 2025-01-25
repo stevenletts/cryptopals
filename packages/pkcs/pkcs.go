@@ -25,3 +25,7 @@ func Pad7Remove(data []byte, blockSize int) []byte {
 	paddingLen := int(data[len(data)-1])
 	return data[:len(data) - paddingLen]
 }
+
+//func HasPad7(data []byte) bool {
+	// get the last byte then check if that byte is repeated for the length of the byte value
+//}
