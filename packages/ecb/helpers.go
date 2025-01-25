@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
 	randmath "math/rand/v2"
 	"os"
 	"slices"
@@ -80,8 +79,6 @@ func makeSecretEncryptionFn(includeFixedRandomPrefix bool) encryptionFunc {
 
 	if includeFixedRandomPrefix {
 		randLength := randmath.IntN(100)
-
-		fmt.Printf("prefix size is %v\n", randLength)
 
 		randomFixedPrefix = generateRandByteSlice(randLength)
 	}

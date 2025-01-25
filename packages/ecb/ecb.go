@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"errors"
-	"fmt"
+
 	"github.com/stevenletts/cryptopals/packages/pkcs"
 	"github.com/stevenletts/cryptopals/packages/xor"
 	"os"
@@ -199,17 +199,16 @@ func getCipherTextsChunksForPrefixTransposed(size int, enc encryptionFunc) [][][
 	return transposed
 }
 
-func ByteAtATimeECBDecryption() []byte {
-	enc := makeSecretEncryptionFn(false)
+func ByteAtATimeECBDecryption(enc encryptionFunc) []byte {
 	blockSize := discoverBlockSize(enc)
 
-	chunks, _ := ChunkByteSlice(enc(fillByteSlice(make([]byte, blockSize*2))), blockSize)
-	isEcb := checkChunksForECB(chunks)
+		chunks, _ := ChunkByteSlice(enc(fillByteSlice(make([]byte, blockSize*2))), blockSize)
+		isEcb := checkChunksForECB(chunks)
 
-    // not really possible here but the challenge called for it.
-	if !isEcb {
-		panic(errors.New("the encryption is not ECB"))
-	}
+	    // not really possible here but the challenge called for it.
+		if !isEcb {
+			panic(errors.New("the encryption is not ECB"))
+		}
 
 	ctsTransposed := getCipherTextsChunksForPrefixTransposed(blockSize, enc)
 
@@ -242,15 +241,18 @@ func ByteAtATimeECBDecryptionWithRandomPrefix() []byte {
 	enc := makeSecretEncryptionFn(true)
 	blockSize := discoverBlockSize(enc)
 
-	fmt.Printf("block size is %v\n", blockSize)
-
 	prefixLen := findRandomPrefixLen(enc, blockSize)
+	space := blockSize - (prefixLen % blockSize)
+	roundedUp := (prefixLen + blockSize - 1) / blockSize
 
-	fmt.Printf("solved prefix length is %v", prefixLen)
+	// wrap the enc fn to amend the input to always have the dist between a full block and the prefix so that we are only seeing plaintext
+	// then drop the prefix bytes so its a "clean" input of the attack+enc value
+	wrappedEnc := func(inp []byte) []byte {
+		amendedInp := append(make([]byte, space), inp...)
+		res := enc(amendedInp)
+		return res[roundedUp*blockSize:]
+	}
 
-	return []byte{}
 
-//	ctsTransposed := getCipherTextsChunksForPrefixTransposed(blockSize, enc)
-
+	return ByteAtATimeECBDecryption(wrappedEnc)
 }
-
