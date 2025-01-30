@@ -3,7 +3,7 @@ package ecb
 import (
 	"bytes"
 
-		"github.com/stevenletts/cryptopals/packages/pkcs"
+		"github.com/stevenletts/cryptopals/pkgs/pkcs"
 
 	"encoding/base64"
 	"os"
@@ -175,4 +175,9 @@ func TestEncodeProfile(t *testing.T) {
 	}
 }
 
-func Test
+func TestCBCBitFlipping(t *testing.T) {
+	res := CBCBitFlipping()
+	if !res {
+		t.Fatal()
+	}
+}

@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/stevenletts/cryptopals/packages/pkcs"
-	"github.com/stevenletts/cryptopals/packages/xor"
+	"github.com/stevenletts/cryptopals/pkgs/pkcs"
+	"github.com/stevenletts/cryptopals/pkgs/xor"
 	"os"
 )
 
@@ -203,13 +203,13 @@ func getCipherTextsChunksForPrefixTransposed(size int, enc encryptionFunc) [][][
 func ByteAtATimeECBDecryption(enc encryptionFunc) []byte {
 	blockSize := discoverBlockSize(enc)
 
-		chunks, _ := ChunkByteSlice(enc(fillByteSlice(make([]byte, blockSize*2))), blockSize)
-		isEcb := checkChunksForECB(chunks)
+	chunks, _ := ChunkByteSlice(enc(fillByteSlice(make([]byte, blockSize*2))), blockSize)
+	isEcb := checkChunksForECB(chunks)
 
-	    // not really possible here but the challenge called for it.
-		if !isEcb {
-			panic(errors.New("the encryption is not ECB"))
-		}
+	// not really possible here but the challenge called for it.
+	if !isEcb {
+		panic(errors.New("the encryption is not ECB"))
+	}
 
 	ctsTransposed := getCipherTextsChunksForPrefixTransposed(blockSize, enc)
 
@@ -254,11 +254,10 @@ func ByteAtATimeECBDecryptionWithRandomPrefix() []byte {
 		return res[roundedUp*blockSize:]
 	}
 
-
 	return ByteAtATimeECBDecryption(wrappedEnc)
 }
 
-func CBCBitFlipping() []byte {
+func CBCBitFlipping() bool {
 	// create an unknown key and keep it at the top level
 	SIZE := 16
 	key := generateRandByteSlice(SIZE)
@@ -267,16 +266,15 @@ func CBCBitFlipping() []byte {
 	suf := ";comment2=%20like%20a%20pound%20of%20bacon"
 	admin := []byte(";admin=true")
 
-	var justifiedAdmin []byte
+	var justifiedAdmin []byte = make([]byte, 16)
 
-	for i := 0; i <16; i++{
+	for i := 0; i < 16; i++ {
 		if i < len(admin) {
 			justifiedAdmin[i] = admin[i]
 		} else {
 			justifiedAdmin[i] = byte('A')
 		}
 	}
-
 
 	wrappedEncrypt := func(str string) ([]byte, error) {
 		inp := prefixAndSuffixStr(str, pre, suf)
@@ -290,17 +288,23 @@ func CBCBitFlipping() []byte {
 	}
 
 	aBlock := bytes.Repeat([]byte("A"), SIZE)
-	twoABlock := bytes.Repeat([]byte("A"), SIZE *2)
-	threeABlock := bytes.Repeat([]byte("A"), SIZE *3)
+	twoABlock := bytes.Repeat([]byte("A"), SIZE*2)
+	//	threeABlock := bytes.Repeat([]byte("A"), SIZE *3)
 	inpStr := string(twoABlock)
 	ct, _ := wrappedEncrypt(inpStr)
 	flipper, _ := xor.ApplyXor(aBlock, justifiedAdmin)
 
-	var justifiedFlipper []byte
+	rjusted := make([]byte, 3*SIZE)
 
-	for i := 0; i < SIZE * 3; i++ {
-		
+	offset := len(rjusted) - len(flipper)
+	copy(rjusted[offset:], flipper)
+
+	if len(ct) > len(rjusted) {
+		needed := len(ct) - len(rjusted)
+		rjusted = append(rjusted, make([]byte, needed)...)
 	}
 
-}
+	attackCt, _ := xor.ApplyXor(ct, rjusted)
 
+	return checkForAdminInCipher(attackCt)
+}
