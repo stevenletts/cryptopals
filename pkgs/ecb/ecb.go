@@ -213,7 +213,7 @@ func ByteAtATimeECBDecryption(enc encryptionFunc) []byte {
 
 	ctsTransposed := getCipherTextsChunksForPrefixTransposed(blockSize, enc)
 
-	var plaintext []byte = fillByteSlice(make([]byte, blockSize-1))
+	var plaintext = fillByteSlice(make([]byte, blockSize-1))
 	for i := 0; i < len(ctsTransposed); i++ {
 		transposedChunksSolvingFor := ctsTransposed[i]
 		for j := 0; j < len(transposedChunksSolvingFor); j++ {
@@ -266,7 +266,7 @@ func CBCBitFlipping() bool {
 	suf := ";comment2=%20like%20a%20pound%20of%20bacon"
 	admin := []byte(";admin=true")
 
-	var justifiedAdmin []byte = make([]byte, 16)
+	var justifiedAdmin = make([]byte, 16)
 
 	for i := 0; i < 16; i++ {
 		if i < len(admin) {

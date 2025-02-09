@@ -68,7 +68,7 @@ func checkChunksForECB[T comparable](chunks [][]T) bool {
 type encryptionFunc func([]byte) []byte
 
 func makeSecretEncryptionFn(includeFixedRandomPrefix bool) encryptionFunc {
-	data, err := os.ReadFile("./test_files/secret64.txt")
+	data, err := os.ReadFile("./testdata/secret64.txt")
 
 	if err != nil {
 		panic(err)

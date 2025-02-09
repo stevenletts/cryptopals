@@ -12,7 +12,7 @@ import (
 )
 
 func TestDecryptAesEcb(t *testing.T) {
-	data, _ := os.ReadFile("./test_files/aes_encrypted_file.txt")
+	data, _ := os.ReadFile("./testdata/aes_encrypted_file.txt")
 	decoded, _ := base64.StdEncoding.DecodeString(string(data))
 	txt, err := DecryptAesEcb(decoded, []byte("YELLOW SUBMARINE"))
 	if err != nil {
@@ -26,7 +26,7 @@ func TestDecryptAesEcb(t *testing.T) {
 }
 
 func TestCheckFileForECBSuccess(t *testing.T) {
-	line := CheckFileForECB("./test_files/find_ECB_line.txt")
+	line := CheckFileForECB("./testdata/find_ECB_line.txt")
 
 	if line != 133 {
 		t.Fatalf("File ECB check failed. expected: 133, got: %d", line)
@@ -62,7 +62,7 @@ func TestEncryptAesCbcExample(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00,
 	}
 
-	data, _ := os.ReadFile("./test_files/cbc_encrypted.txt")
+	data, _ := os.ReadFile("./testdata/cbc_encrypted.txt")
 
 	decoded, _ := base64.StdEncoding.DecodeString(string(data))
 	plaintext, _ := DecryptAesCbc(decoded, iv, key)
@@ -99,7 +99,7 @@ func TestDiscoverBlockSize(t *testing.T) {
 }
 
 func TestByteAtATimeECBDecryption(t *testing.T) {
-	data, err := os.ReadFile("./test_files/secret64.txt")
+	data, err := os.ReadFile("./testdata/secret64.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -123,7 +123,7 @@ func TestByteAtATimeECBDecryption(t *testing.T) {
 }
 
 func TestByteAtATimeECBDecryptionWithRandomPrefix(t *testing.T) {
-	data, err := os.ReadFile("./test_files/secret64.txt")
+	data, err := os.ReadFile("./testdata/secret64.txt")
 	if err != nil {
 		panic(err)
 	}
