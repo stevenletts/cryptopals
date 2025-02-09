@@ -43,17 +43,17 @@ func _(str string) StringKVParser {
 }
 
 func profileFor(email string) string {
-    // Sanitizing the email by removing '&' and '='
-    sanitizedEmail := strings.NewReplacer("&", "", "=", "").Replace(email)
+	// Sanitizing the email by removing '&' and '='
+	sanitizedEmail := strings.NewReplacer("&", "", "=", "").Replace(email)
 
-    // Build in the desired order explicitly:
-    kvPairs := []string{
-        fmt.Sprintf("email=%s", sanitizedEmail),
-        fmt.Sprintf("uid=%s", "10"),
-        fmt.Sprintf("role=%s", "user"),
-    }
+	// Build in the desired order explicitly:
+	kvPairs := []string{
+		fmt.Sprintf("email=%s", sanitizedEmail),
+		fmt.Sprintf("uid=%s", "10"),
+		fmt.Sprintf("role=%s", "user"),
+	}
 
-    return strings.Join(kvPairs, "&")
+	return strings.Join(kvPairs, "&")
 }
 
 // this is a wrapper for challenge 11 it either encryptes using aes or ecb using a random key

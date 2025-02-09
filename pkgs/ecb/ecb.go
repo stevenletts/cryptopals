@@ -204,9 +204,13 @@ func ByteAtATimeECBDecryption(enc encryptionFunc) []byte {
 }
 
 func ByteAtATimeECBDecryptionWithRandomPrefix() []byte {
+	// the difference in this challenge was the pt was prefix, att controlled, secret
+	// the prefix remained static and is encapsulated it the enc fn.
 	enc := makeSecretEncryptionFn(true)
 	blockSize := discoverBlockSize(enc)
 
+	// this func is the main part of the challenge as it has to discover the random prefix leng - i think i forced it to be >100 but it should work
+	// on any len.
 	prefixLen := findRandomPrefixLen(enc, blockSize)
 	space := blockSize - (prefixLen % blockSize)
 	roundedUp := (prefixLen + blockSize - 1) / blockSize
@@ -273,3 +277,7 @@ func CBCBitFlipping() bool {
 	return checkForAdminInCipher(attackCt)
 }
 
+func CBCPaddingOracle() string {
+
+	return ""
+}

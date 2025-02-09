@@ -3,11 +3,11 @@ package ecb
 import (
 	"bytes"
 
-		"github.com/stevenletts/cryptopals/pkgs/pkcs"
+	"github.com/stevenletts/cryptopals/pkgs/pkcs"
 
 	"encoding/base64"
 	"os"
-		"strings"
+	"strings"
 	"testing"
 )
 
@@ -137,8 +137,7 @@ func TestByteAtATimeECBDecryptionWithRandomPrefix(t *testing.T) {
 	}
 	solution := ByteAtATimeECBDecryptionWithRandomPrefix()
 
-
-//	 there is padding of 1 here just remove to finish
+	//	 there is padding of 1 here just remove to finish
 	if bytes.Compare(expectedBytes, solution[:len(solution)-1]) != 0 {
 		t.Fatalf("failed")
 	}

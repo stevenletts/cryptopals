@@ -32,7 +32,7 @@ func HasPad7(data []byte) (bool, int) {
 	last := data[len(data)-1]
 	length := int(last)
 
-	for i := len(data) -1; i >= len(data) -length; i-- {
+	for i := len(data) -1; i >= len(data)-length; i-- {
 		b := data[i]
 		if b == last {
 			continue

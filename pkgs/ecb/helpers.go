@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"github.com/stevenletts/cryptopals/pkgs/pkcs"
 	randmath "math/rand/v2"
 	"os"
 	"slices"
@@ -53,8 +54,9 @@ func discoverBlockSize(encryptor encryptionFunc) int {
 	}
 }
 
-// ECB
 func checkChunksForECB[T comparable](chunks [][]T) bool {
+	// ECB inpx === outx. so if you take an encFn and put encFn(bytes.Reapeat(byte('A'), chunkLen*2) both chunks will always
+	// be the same.
 	for i, c := range chunks {
 		for j, c2 := range chunks {
 			if i == j {
@@ -142,14 +144,13 @@ func findRandomPrefixLen(enc encryptionFunc, blockSize int) int {
 
 		if bytes.Compare(prevjthchunk, checkingChunks[ithChunkChanged]) == 0 {
 			// its actually the previous iteration that filled the chunk but we see the confirmed result in the +1.
-			extraLen = j -1
+			extraLen = j - 1
 			break
 		}
 
 		prevjthchunk = checkingChunks[ithChunkChanged]
 	}
 
-	// off by one lol
 	result = (blockSize * (ithChunkChanged + 1)) - extraLen
 
 	return result
@@ -173,3 +174,40 @@ func isAdmin(data []byte) bool {
 	return true
 }
 
+func setUpChallenge17() (func() []byte, encryptionFunc, func([]byte) (bool, int)) {
+	var SIZE = 16
+	var secrets = []string{
+		"MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
+		"MDAwMDAxV2l0aCB0aGUgYmFzcyBraWNrZWQgaW4gYW5kIHRoZSBWZWdhJ3MgYXJlIHB1bXBpbic=",
+		"MDAwMDAyUXVpY2sgdG8gdGhlIHBvaW50LCB0byB0aGUgcG9pbnQsIG5vIGZha2luZw==",
+		"MDAwMDAzQ29va2luZyBNQydzIGxpa2UgYSBwb3VuZCBvZiBiYWNvbg==",
+		"MDAwMDA0QnVybmluZyAnZW0sIGlmIHlvdSBhaW4ndCBxdWljayBhbmQgbmltYmxl",
+		"MDAwMDA1SSBnbyBjcmF6eSB3aGVuIEkgaGVhciBhIGN5bWJhbA==",
+		"MDAwMDA2QW5kIGEgaGlnaCBoYXQgd2l0aCBhIHNvdXBlZCB1cCB0ZW1wbw==",
+		"MDAwMDA3SSdtIG9uIGEgcm9sbCwgaXQncyB0aW1lIHRvIGdvIHNvbG8=",
+		"MDAwMDA4b2xsaW4nIGluIG15IGZpdmUgcG9pbnQgb2g=",
+		"MDAwMDA5aXRoIG15IHJhZy10b3AgZG93biBzbyBteSBoYWlyIGNhbiBibG93",
+	}
+
+	randomInt := randmath.IntN(len(secrets))
+	var secret = secrets[randomInt]
+	padded := pkcs.Pad7([]byte(secret), SIZE)
+	key := generateRandByteSlice(SIZE)
+	iv := []byte("YELLOW SUBMARINE")
+
+	encFn := func() []byte {
+		ct, _ := EncryptAesCbc(padded, iv, key)
+		return ct
+	}
+
+	decFn := func(ct []byte) []byte {
+		pt, _ := DecryptAesCbc(ct, iv, key)
+		return pt
+	}
+
+	validPadding := func(pt []byte) (bool, int) {
+		return pkcs.HasPad7(pt)
+	}
+
+	return encFn, decFn, validPadding
+}
