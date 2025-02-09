@@ -44,7 +44,7 @@ func TestFindSingleByteXorSimple(t *testing.T) {
 
 func TestFindSingleXordLineInFileSimple(t *testing.T) {
 	expected := "Now that the party is jumping"
-	answer := FindSingleXordLineInFile("./test_files/xor_encoded.txt")
+	answer := FindSingleXordLineInFile("./testdata/xor_encoded.txt")
 	strAns := strings.TrimSpace(string(answer))
 	if strings.Compare(expected, strAns) != 0 {
 		t.Fatalf("Failed to find the single Xord line in the file. Expected %s, got %s", expected, strAns)
@@ -65,7 +65,7 @@ func TestEncodeXorRepeatingKey(t *testing.T) {
 }
 
 func TestEvaluateKeyAgainstOriginalData(t *testing.T) {
-	data, _ := os.ReadFile("./test_files/decrypt_file.txt")
+	data, _ := os.ReadFile("./testdata/decrypt_file.txt")
 	decoded, _ := base64.StdEncoding.DecodeString(string(data))
 
 	keySizesAndScoredSorted := GetUnknownRepeatingXorPotentialKeysizes(&decoded, 2, 41)

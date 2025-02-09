@@ -1,7 +1,6 @@
 package ecb
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/aes"
 	"errors"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/stevenletts/cryptopals/pkgs/pkcs"
 	"github.com/stevenletts/cryptopals/pkgs/xor"
-	"os"
 )
 
 // ChunkByteSlice takes a data src and a blocksize and returns a slice of equal chunks with padding at the end if required
@@ -119,39 +117,6 @@ func DecryptAesCbc(ciphertext, iv, key []byte) ([]byte, error) {
 	}
 
 	return plaintext, nil
-}
-
-func CheckFileForECB(fp string) int {
-	file, err := os.Open(fp)
-
-	if err != nil {
-		panic(err)
-	}
-
-	reader := bufio.NewReader(file)
-
-	var counter = 1
-	for {
-		line, err := reader.ReadBytes('\n')
-		if err != nil {
-			break
-		}
-
-		clean := bytes.TrimRight(line, "\r\n")
-
-		var chunks [][]byte
-		chunks, _ = ChunkByteSlice(clean, 16)
-
-		var ecbFound = checkChunksForECB(chunks)
-
-		if ecbFound {
-			break
-		}
-
-		counter += 1
-	}
-
-	return counter
 }
 
 // DetectECBOrCBC takes a string to pass to a helper fn for the challenge and then returns true if a mode was detected and the mode found
@@ -289,7 +254,6 @@ func CBCBitFlipping() bool {
 
 	aBlock := bytes.Repeat([]byte("A"), SIZE)
 	twoABlock := bytes.Repeat([]byte("A"), SIZE*2)
-	//	threeABlock := bytes.Repeat([]byte("A"), SIZE *3)
 	inpStr := string(twoABlock)
 	ct, _ := wrappedEncrypt(inpStr)
 	flipper, _ := xor.ApplyXor(aBlock, justifiedAdmin)
@@ -308,3 +272,4 @@ func CBCBitFlipping() bool {
 
 	return checkForAdminInCipher(attackCt)
 }
+

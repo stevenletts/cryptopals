@@ -1,9 +1,12 @@
 package ecb
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	randmath "math/rand/v2"
+	"os"
 	"strings"
 )
 
@@ -21,7 +24,7 @@ func (s StringKVParser) Set(key, value string) {
 	s[key] = value
 }
 
-func keyValueParser(str string) StringKVParser {
+func _(str string) StringKVParser {
 	parser := StringKVParser{}
 
 	kvs := strings.Split(str, "&")
@@ -66,7 +69,7 @@ func encryptionOracle(plaintext []byte) ([]byte, string) {
 
 	var ciphertext []byte
 	var err error
-	var encryptionModeRand int = randmath.IntN(2)
+	var encryptionModeRand = randmath.IntN(2)
 	var mode string
 
 	switch encryptionModeRand {
@@ -90,4 +93,38 @@ func encryptionOracle(plaintext []byte) ([]byte, string) {
 	}
 
 	return ciphertext, mode
+}
+
+// CheckFileForECB for a specific challenge there was a requirement to check a file for ecb - this is just a wrapper for the real check fn
+func CheckFileForECB(fp string) int {
+	file, err := os.Open(fp)
+
+	if err != nil {
+		panic(err)
+	}
+
+	reader := bufio.NewReader(file)
+
+	var counter = 1
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			break
+		}
+
+		clean := bytes.TrimRight(line, "\r\n")
+
+		var chunks [][]byte
+		chunks, _ = ChunkByteSlice(clean, 16)
+
+		var ecbFound = checkChunksForECB(chunks)
+
+		if ecbFound {
+			break
+		}
+
+		counter += 1
+	}
+
+	return counter
 }

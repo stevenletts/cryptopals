@@ -30,6 +30,8 @@ func fillByteSlice(toFill []byte) []byte {
 	return toFill
 }
 
+// discoverBlockSize takes an encryption func and iteratively increases the input size until it observes a change in output length which will be
+// equal to a block
 func discoverBlockSize(encryptor encryptionFunc) int {
 	var previousLen = 0
 	var i = 1
@@ -51,6 +53,7 @@ func discoverBlockSize(encryptor encryptionFunc) int {
 	}
 }
 
+// ECB
 func checkChunksForECB[T comparable](chunks [][]T) bool {
 	for i, c := range chunks {
 		for j, c2 := range chunks {
