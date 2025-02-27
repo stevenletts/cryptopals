@@ -278,6 +278,6 @@ func CBCBitFlipping() bool {
 }
 
 func CBCPaddingOracle() string {
-
+	setUpChallenge17()
 	return ""
 }

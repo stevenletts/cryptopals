@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"github.com/stevenletts/cryptopals/pkgs/pkcs"
+
+	//	"gihub.com/stevenletts/cryptopals/pkgs/pkcs"
 	randmath "math/rand/v2"
 	"os"
 	"slices"
@@ -174,7 +176,17 @@ func isAdmin(data []byte) bool {
 	return true
 }
 
-func setUpChallenge17() (func() []byte, encryptionFunc, func([]byte) (bool, int)) {
+type enc17 func([]byte) []byte
+type dec17 func([]byte, []byte) []byte
+
+func setUpChallenge17() (enc17, dec17, []byte, []byte) {
+	// this function selects a random string from the set the challenge provides and creates a key. The IV should be attacker controlled.
+	// the enc fn encapsulates the key and secret and passes the fn out so it hides the internal details.
+
+	// actually! this fn should return the ct and not the enc fn. the enc fn should remain hidden and a random IV should be used.
+	// the dec fn should be callable and it should then verify the padding to the caller but not return the pt.
+	// the attack is focused around having a ct and having an attacker controlled iv which can be tested against the success of the padding.
+
 	var SIZE = 16
 	var secrets = []string{
 		"MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
@@ -190,24 +202,31 @@ func setUpChallenge17() (func() []byte, encryptionFunc, func([]byte) (bool, int)
 	}
 
 	randomInt := randmath.IntN(len(secrets))
-	var secret = secrets[randomInt]
-	padded := pkcs.Pad7([]byte(secret), SIZE)
-	key := generateRandByteSlice(SIZE)
-	iv := []byte("YELLOW SUBMARINE")
+	var secret64 = secrets[randomInt]
+	de64d, _ := base64.StdEncoding.DecodeString(string(secret64))
+	paddedSecret := pkcs.Pad7(de64d, SIZE)
 
-	encFn := func() []byte {
-		ct, _ := EncryptAesCbc(padded, iv, key)
+	//	fmt.Println("my secret is ",  paddedSecret)
+
+	//	for _, v := range secrets {
+	//		newStr, _ := base64.StdEncoding.DecodeString(string(v))
+	//		fmt.Println(string(newStr))
+	//	}
+
+	key := generateRandByteSlice(SIZE)
+
+	encFn := func(iv []byte) []byte {
+		ct, _ := EncryptAesCbc(paddedSecret, iv, key)
 		return ct
 	}
 
-	decFn := func(ct []byte) []byte {
+	decFn := func(ct, iv []byte) []byte {
 		pt, _ := DecryptAesCbc(ct, iv, key)
 		return pt
 	}
 
-	validPadding := func(pt []byte) (bool, int) {
-		return pkcs.HasPad7(pt)
-	}
+	iv := generateRandByteSlice(SIZE)
+	ct := encFn(iv)
 
-	return encFn, decFn, validPadding
+	return encFn, decFn, ct, iv
 }
