@@ -4,7 +4,6 @@ import (
 	"bytes"
 
 	"encoding/base64"
-	"fmt"
 	"github.com/stevenletts/cryptopals/pkgs/pkcs"
 	"os"
 	"strings"
@@ -186,11 +185,6 @@ func TestChallenge17(t *testing.T) {
 	// anyways, this flow is enough to set up challenge 17 now as we have the iv, ct, decFn and an encryptor.
 	// I think the next steps are to continually try to call dec with the ct and a zeroing iv to find out what the corresponding
 	// iv is for the
-	_, decFn, ct, iv := setUpChallenge17()
-	pt := decFn(ct, iv)
-	cleaned := bytes.Trim(pt, "\x00")
-	fmt.Println(len(ct))
-	fmt.Println(len(pt))
-	fmt.Println(len(cleaned))
+	CBCPaddingOracle()
 
 }

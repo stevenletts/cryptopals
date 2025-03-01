@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"errors"
-	"fmt"
-
+"fmt"
 	"github.com/stevenletts/cryptopals/pkgs/pkcs"
 	"github.com/stevenletts/cryptopals/pkgs/xor"
 )
@@ -97,8 +96,8 @@ func DecryptAesCbc(ciphertext, iv, key []byte) ([]byte, error) {
 	}
 
 	size := cipher.BlockSize()
-	chunks, length := ChunkByteSlice(ciphertext, size)
-	plaintext := make([]byte, length)
+	chunks, _ := ChunkByteSlice(ciphertext, size)
+	var plaintext []byte
 
 	prev := iv
 	for _, chunk := range chunks {
@@ -252,7 +251,7 @@ func CBCBitFlipping() bool {
 
 	checkForAdminInCipher := func(ciphertext []byte) bool {
 		plaintext, _ := DecryptAesCbc(ciphertext, iv, key)
-		fmt.Printf("checking for admin %s", plaintext)
+		//		fmt.Printf("checking for admin %s", plaintext)
 		return isAdmin(plaintext)
 	}
 
@@ -278,6 +277,51 @@ func CBCBitFlipping() bool {
 }
 
 func CBCPaddingOracle() string {
-	setUpChallenge17()
+	var res []byte
+
+	paddingChecker, ct, iv := setUpChallenge17()
+	blocks, _ := ChunkByteSlice(ct, 16)
+
+	// singleBlockAttack takes the previous block (prevBlock) and the current block (curBlock)
+	// and returns the decrypted plaintext for the current block.
+	singleBlockAttack := func(prevBlock, curBlock []byte) []byte {
+		var localResult []byte
+		zeroingIv := make([]byte, 16)
+
+		for padLen := 1; padLen <= 16; padLen++ {
+			paddingIv, _ := xor.ApplyXor(bytes.Repeat([]byte{byte(padLen)}, 16), zeroingIv)
+			for candidate := 0; candidate < 256; candidate++ {
+				paddingIv[len(paddingIv)-padLen] = byte(candidate)
+
+				if match, _ := paddingChecker(curBlock, paddingIv); match {
+					if padLen == 1 {
+						paddingIv[len(paddingIv)-2] ^= 1
+						if newMatch, _ := paddingChecker(curBlock, paddingIv); !newMatch {
+							paddingIv[len(paddingIv)-2] ^= 1
+							continue
+						}
+						paddingIv[len(paddingIv)-2] ^= 1
+					}
+					resultByte := byte(padLen) ^ byte(candidate)
+					localResult = append([]byte{resultByte}, localResult...)
+					zeroingIv[len(zeroingIv)-padLen] = resultByte
+					break
+				}
+			}
+		}
+		ret, _ := xor.ApplyXor(localResult, prevBlock)
+		return ret
+	}
+
+	// The first block is the iv; iterate over the ciphertext blocks
+	prevBlock := iv
+	for _, block := range blocks {
+		res = append(res, singleBlockAttack(prevBlock, block)...)
+		fmt.Printf("result is %+v\n", string(res))
+		prevBlock = block
+	}
+
+
+	fmt.Println("end result", string(res), len(res), len(blocks))
 	return ""
 }
